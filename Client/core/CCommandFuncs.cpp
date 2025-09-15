@@ -5,7 +5,7 @@
  *  FILE:        core/CCommandFuncs.cpp
  *  PURPOSE:     Implementation of all built-in commands
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -167,36 +167,13 @@ void CCommandFuncs::Clear(const char* szParameters)
 
 void CCommandFuncs::Load(const char* szParameters)
 {
-    if (!szParameters)
-    {
-        CCore::GetSingleton().GetConsole()->Printf("* Syntax: load <mod-name> [<arguments>]");
-        return;
-    }
-
-    // Copy the buffer
-    char* szTemp = new char[strlen(szParameters) + 1];
-    strcpy(szTemp, szParameters);
-
-    // Split it up into mod name and the arguments
-    char* szModName = strtok(szTemp, " ");
-    char* szArguments = strtok(NULL, "\0");
-
-    if (szModName)
-    {
-        // Load the mod with the given arguments
-        CModManager::GetSingleton().RequestLoad(szModName, szArguments);
-    }
-    else
-        CCore::GetSingleton().GetConsole()->Printf("* Syntax: load <mod-name> [<arguments>]");
-
-    // Free the temp buffer
-    delete[] szTemp;
+    CModManager::GetSingleton().RequestLoad(szParameters);
 }
 
 void CCommandFuncs::Unload(const char* szParameters)
 {
     // Any mod loaded?
-    if (CModManager::GetSingleton().GetCurrentMod())
+    if (CModManager::GetSingleton().IsLoaded())
     {
         // Unload it
         CModManager::GetSingleton().RequestUnload();
@@ -209,6 +186,12 @@ void CCommandFuncs::Unload(const char* szParameters)
 
 void CCommandFuncs::Connect(const char* szParameters)
 {
+    if (!CCore::GetSingleton().IsNetworkReady())
+    {
+        CCore::GetSingleton().GetConsole()->Print(_("connect: Network is not ready, please wait a moment"));
+        return;
+    }
+
     // Parse the arguments (host port nick pass)
     char szBuffer[256] = "";
     if (szParameters)
@@ -264,7 +247,7 @@ void CCommandFuncs::Connect(const char* szParameters)
     CModManager::GetSingleton().Unload();
 
     // Only connect if there is no mod loaded
-    if (!CModManager::GetSingleton().GetCurrentMod())
+    if (!CModManager::GetSingleton().IsLoaded())
     {
         // Start the connect
         if (CCore::GetSingleton().GetConnectManager()->Connect(szHost, usPort, strNick.c_str(), szPass))
@@ -284,7 +267,7 @@ void CCommandFuncs::Connect(const char* szParameters)
 
 void CCommandFuncs::ReloadNews(const char* szParameters)
 {
-    if (CModManager::GetSingleton().GetCurrentMod())
+    if (CModManager::GetSingleton().IsLoaded())
     {
         CCore::GetSingleton().GetConsole()->Print("reloadnews: can't do this whilst connected to server");
         return;
@@ -296,6 +279,12 @@ void CCommandFuncs::ReloadNews(const char* szParameters)
 
 void CCommandFuncs::Reconnect(const char* szParameters)
 {
+    if (!CCore::GetSingleton().IsNetworkReady())
+    {
+        CCore::GetSingleton().GetConsole()->Print(_("reconnect: Network is not ready, please wait a moment"));
+        return;
+    }
+
     CModManager::GetSingleton().Unload();
 
     std::string  strHost, strNick, strPassword;
@@ -309,7 +298,7 @@ void CCommandFuncs::Reconnect(const char* szParameters)
     CModManager::GetSingleton().Unload();
 
     // Any mod loaded?
-    if (!CModManager::GetSingleton().GetCurrentMod())
+    if (!CModManager::GetSingleton().IsLoaded())
     {
         // Verify and convert the port number
         if (uiPort <= 0 || uiPort > 0xFFFF)
@@ -329,6 +318,10 @@ void CCommandFuncs::Reconnect(const char* szParameters)
         // Start the connect
         if (CCore::GetSingleton().GetConnectManager()->Reconnect(strHost.c_str(), usPort, strPassword.c_str(), false))
         {
+            if (CCore::GetSingleton().GetConnectManager()->WasQuickConnect())
+            {
+                CCore::GetSingleton().GetConnectManager()->SetQuickConnect(false);
+            }
             CCore::GetSingleton().GetConsole()->Printf(_("reconnect: Reconnecting to %s:%u..."), strHost.c_str(), usPort);
         }
         else
@@ -438,6 +431,19 @@ void CCommandFuncs::Test(const char* szParameters)
             }
         }
     }
+#if defined(MTA_DEBUG) || MTASA_VERSION_TYPE == VERSION_TYPE_CUSTOM
+    else if (SStringX(szParameters) == "bad_alloc")
+    {
+        if (FileExists(CalcMTASAPath("debug.txt")))
+        {
+            while (true)
+            {
+                new int[100 * 1024 * 1024]();
+                g_pCore->GetConsole()->Print("Allocated 100 MiB");
+            }
+        }
+    }
+#endif
 }
 
 void CCommandFuncs::Serial(const char* szParameters)
@@ -474,7 +480,8 @@ void CCommandFuncs::FakeLag(const char* szCmdLine)
     if (parts.size() > 3)
         iKBPSLimit = atoi(parts[3]);
 
-    g_pCore->GetNetwork()->SetFakeLag(iPacketLoss, iExtraPing, iExtraPingVary, iKBPSLimit);
+    g_pCore->GetNetwork()->SetFakeLag(static_cast<unsigned short>(iPacketLoss), static_cast<unsigned short>(iExtraPing),
+                                      static_cast<unsigned short>(iExtraPingVary), iKBPSLimit);
     g_pCore->GetConsole()->Print(SString("Client send lag is now: %d%% packet loss and %d extra ping with %d extra ping variance and %d KBPS limit",
                                          iPacketLoss, iExtraPing, iExtraPingVary, iKBPSLimit));
 }

@@ -5,7 +5,7 @@
  *  FILE:        core/CProxyDirect3D9.cpp
  *  PURPOSE:     Direct3D 9 function hooking proxy
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -245,6 +245,30 @@ HRESULT CProxyDirect3D9::CreateDevice(UINT Adapter, D3DDEVTYPE DeviceType, HWND 
 
     hResult =
         HandleCreateDeviceResult(hResult, m_pDevice, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
+
+    // After successful device creation
+    if (SUCCEEDED(hResult) && *ppReturnedDeviceInterface)
+    {
+        // Check if we're in borderless mode
+        bool bIsBorderlessMode = pPresentationParameters->Windowed == TRUE;
+
+        if (bIsBorderlessMode)
+        {
+            // Enable sRGB correction for borderless mode to compensate for DWM composition
+            CProxyDirect3DDevice9* pProxyDevice = static_cast<CProxyDirect3DDevice9*>(*ppReturnedDeviceInterface);
+
+            // Set initial render states for proper color handling
+            pProxyDevice->SetRenderState(D3DRS_SRGBWRITEENABLE, TRUE);
+
+            // Configure samplers for sRGB texture reading
+            for (DWORD i = 0; i < 8; i++)
+            {
+                pProxyDevice->SetSamplerState(i, D3DSAMP_SRGBTEXTURE, TRUE);
+            }
+
+            WriteDebugEvent("Applied sRGB color correction for borderless mode");
+        }
+    }
 
     return hResult;
 }
@@ -832,6 +856,13 @@ HRESULT HandleCreateDeviceResult(HRESULT hResult, IDirect3D9* pDirect3D, UINT Ad
         strMessage += "There was a problem starting MTA:SA\n\n";
         strMessage += SString("Direct3D CreateDevice error: %08x", hResult);
         BrowseToSolution("d3dcreatedevice-fail", EXIT_GAME_FIRST | ASK_GO_ONLINE, strMessage);
+    }
+    else
+    {
+        // Get current refresh rate
+        D3DDISPLAYMODE DisplayMode;
+        if (pDirect3D->GetAdapterDisplayMode(Adapter, &DisplayMode) == D3D_OK)
+            CCore::GetSingleton().SetCurrentRefreshRate(DisplayMode.RefreshRate);
     }
 
     return hResult;

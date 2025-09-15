@@ -4,7 +4,7 @@
  *
  *   The FreeType basic cache interface (body).
  *
- * Copyright (C) 2003-2024 by
+ * Copyright (C) 2003-2025 by
  * David Turner, Robert Wilhelm, and Werner Lemberg.
  *
  * This file is part of the FreeType project, and may only be used,
@@ -45,8 +45,9 @@
           FT_BOOL( FTC_SCALER_COMPARE( &(a)->scaler, &(b)->scaler ) && \
                    (a)->load_flags == (b)->load_flags               )
 
-#define FTC_BASIC_ATTR_HASH( a )                                     \
-          ( FTC_SCALER_HASH( &(a)->scaler ) + 31 * (a)->load_flags )
+#define FTC_BASIC_ATTR_HASH( a )                  \
+          ( FTC_SCALER_HASH( &(a)->scaler ) +     \
+            (FT_Offset)( 31 * (a)->load_flags ) )
 
 
   typedef struct  FTC_BasicQueryRec_

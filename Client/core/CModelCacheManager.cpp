@@ -3,7 +3,7 @@
  *  PROJECT:     Multi Theft Auto v1.0
  *  LICENSE:     See LICENSE in the top level directory
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -177,10 +177,13 @@ void CModelCacheManagerImpl::PreLoad()
         {
             if (bSlowMethod)
                 SetApplicationSettingInt(DIAG_PRELOAD_UPGRADE_ATTEMPT_ID, i);
-            AddModelRefCount(i);
+            
+            AddModelRefCount(static_cast<ushort>(i));
+
             if (bSlowMethod)
                 m_pGame->GetStreaming()->LoadAllRequestedModels(false);
         }
+
         m_pGame->GetStreaming()->LoadAllRequestedModels(false);
     }
     WatchDogCompletedSection(WD_SECTION_PRELOAD_UPGRADES);
@@ -483,7 +486,7 @@ void CModelCacheManagerImpl::SubModelRefCount(ushort usModelId)
 bool CModelCacheManagerImpl::UnloadModel(ushort usModelId)
 {
     // Stream out usages in the client module
-    CClientBase* pClientBase = CModManager::GetSingleton().GetCurrentMod();
+    CClientBase* pClientBase = CModManager::GetSingleton().GetClient();
     if (pClientBase)
         pClientBase->RestreamModel(usModelId);
 

@@ -409,7 +409,7 @@ std::unordered_set<SString> CWebCore::AllowPendingPages(bool bRemember)
     }
 
     // Trigger an event now
-    auto pCurrentMod = g_pCore->GetModManager()->GetCurrentMod();
+    auto pCurrentMod = g_pCore->GetModManager()->GetClient();
     if (!pCurrentMod)
         return std::unordered_set<SString>();
 
@@ -502,7 +502,7 @@ void CWebCore::ProcessInputMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
     if ((keyEvent.type == KEYEVENT_CHAR) && isKeyDown(VK_RMENU))
     {
         HKL   current_layout = ::GetKeyboardLayout(0);
-        SHORT scan_res = ::VkKeyScanExW(wParam, current_layout);
+        SHORT scan_res = ::VkKeyScanExW(static_cast<WCHAR>(wParam), current_layout);
         if ((HIBYTE(scan_res) & (2 | 4)) == (2 | 4))
         {
             keyEvent.modifiers &= ~(EVENTFLAG_CONTROL_DOWN | EVENTFLAG_ALT_DOWN);
