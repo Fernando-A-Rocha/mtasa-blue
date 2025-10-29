@@ -31,5 +31,8 @@ public:
     bool IsEmpty() const noexcept { return m_voiceBuffer.empty(); }
 
 private:
+    static constexpr unsigned short MIN_VOICE_BUFFER_LENGTH = 1;
+    static constexpr unsigned short MAX_VOICE_BUFFER_LENGTH = 2048;
+
     std::vector<unsigned char> m_voiceBuffer;
 };

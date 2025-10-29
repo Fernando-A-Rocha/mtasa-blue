@@ -15,20 +15,28 @@
 
 CVoiceDataPacket::CVoiceDataPacket()
 {
-    m_voiceBuffer.reserve(2048);
+    m_voiceBuffer.reserve(MAX_VOICE_BUFFER_LENGTH);
 }
 
 bool CVoiceDataPacket::Read(NetBitStreamInterface& BitStream)
 {
     unsigned short voiceBufferLength{};
 
-    if (BitStream.Read(voiceBufferLength) && voiceBufferLength <= m_voiceBuffer.capacity())
-    {
-        m_voiceBuffer.resize(voiceBufferLength);
-        return BitStream.Read(reinterpret_cast<char*>(m_voiceBuffer.data()), m_voiceBuffer.size());
-    }
+    // Read the length field
+    if (!BitStream.Read(voiceBufferLength))
+        return false;
 
-    return false;
+    // Validate length is within acceptable bounds
+    if (voiceBufferLength < MIN_VOICE_BUFFER_LENGTH || voiceBufferLength > MAX_VOICE_BUFFER_LENGTH)
+        return false;
+
+    // Verify that the BitStream has enough bytes available before attempting to read
+    if (!BitStream.CanReadNumberOfBytes(voiceBufferLength))
+        return false;
+
+    // All validations passed, now resize buffer and read the data
+    m_voiceBuffer.resize(voiceBufferLength);
+    return BitStream.Read(reinterpret_cast<char*>(m_voiceBuffer.data()), m_voiceBuffer.size());
 }
 
 bool CVoiceDataPacket::Write(NetBitStreamInterface& BitStream) const
@@ -53,7 +61,8 @@ void CVoiceDataPacket::SetVoiceData(const unsigned char* voiceBuffer, unsigned s
 {
     m_voiceBuffer.clear();
 
-    if (!voiceBuffer || !voiceBufferLength || voiceBufferLength > m_voiceBuffer.capacity())
+    // Validate input parameters and length bounds
+    if (!voiceBuffer || voiceBufferLength < MIN_VOICE_BUFFER_LENGTH || voiceBufferLength > MAX_VOICE_BUFFER_LENGTH)
         return;
 
     m_voiceBuffer.resize(voiceBufferLength);
